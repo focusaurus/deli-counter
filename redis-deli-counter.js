@@ -40,7 +40,7 @@ RedisDeliCounter.prototype.remove = function remove(item, callback) {
 
 RedisDeliCounter.prototype.reclaim = function (item, callback) {
   var self = this;
-  this.redisClient.exists("sess:" + item, function (error, exists) {
+  this.redisClient.exists(this.keyPrefix + item, function (error, exists) {
     if (error) {
       callback(error);
       return;
@@ -53,7 +53,7 @@ RedisDeliCounter.prototype.reclaim = function (item, callback) {
   });
 };
 
-RedisDeliCounter.prototype.purge = function (keyPrefix, callback) {
+RedisDeliCounter.prototype.purge = function (callback) {
   var self = this;
   this.redisClient.zcard(this.setName, function (error, length) {
     if (error) {
@@ -78,7 +78,7 @@ RedisDeliCounter.prototype.purge = function (keyPrefix, callback) {
 
 RedisDeliCounter.prototype._purgePush = function _push(item, callback) {
   var self = this;
-  this.purge("sess:", function (error) {
+  this.purge(function (error) {
     if (error) {
       callback(error);
       return;

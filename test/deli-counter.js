@@ -1,10 +1,10 @@
 var assert = require('assert');
-var DeliCounter = require('../deli-counter');
+var MemoryDeliCounter = require('..').MemoryDeliCounter;
 
-describe("DeliCounter", function () {
+describe("MemoryDeliCounter", function () {
   var counter;
   beforeEach(function () {
-    counter = new DeliCounter();
+    counter = new MemoryDeliCounter();
   });
   it("should accept any object and return an integer", function() {
     var number1 = counter.add("id1");
@@ -31,7 +31,7 @@ describe("DeliCounter", function () {
   });
 
   it("should rollover properly", function() {
-    var smallCounter = new DeliCounter(3);
+    var smallCounter = new MemoryDeliCounter(3);
     smallCounter.add("1");
     smallCounter.add("2");
     smallCounter.remove("1");
