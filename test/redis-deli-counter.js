@@ -1,5 +1,5 @@
 var assert            = require("assert");
-var async             = require("async");
+var nimble            = require('nimble');
 var redis             = require("redis");
 var RedisDeliCounter  = require("../redis-deli-counter");
 
@@ -36,7 +36,7 @@ function waitForConnection(callback) {
 }
 
 function addOneTwoThree(callback) {
-  async.eachSeries([1,2,3], counter.add.bind(counter), callback);
+  nimble.each([1,2,3], counter.add.bind(counter), callback);
 }
 
 
@@ -61,18 +61,22 @@ describe("RedisDeliCounter", function () {
   });
 
   it("should accept any object and return an integer", function(done) {
-    async.eachSeries([1,2,3], checkAdd, done);
+    nimble.series([
+      checkAdd.bind(null, 1),
+      checkAdd.bind(null, 2),
+      checkAdd.bind(null, 3)
+    ], done);
   });
 
   it("should return the existing score for a re-add", function(done) {
-    async.eachSeries([1,1,1], checkAdd, done);
+    nimble.each([1,1,1], checkAdd, done);
   });
 
   it("should reclaim a lower score when length is exceeded", function(done) {
-    async.series([
-      async.apply(add, 1),
-      async.apply(add, 2),
-      async.apply(add, 3),
+    nimble.series([
+      function (callback) {add(1, callback)},
+      function (callback) {add(2, callback)},
+      function (callback) {add(3, callback)},
       function (callback) {
         redisClient.del(keyPrefix + '1', callback);
       }
@@ -98,10 +102,10 @@ describe("RedisDeliCounter", function () {
   });
 
   it("should return the true when removing a present item", function(done) {
-    async.series([
-      async.apply(add, 1),
-      async.apply(add, 2),
-      async.apply(add, 3)
+    nimble.series([
+      function (callback) {add(1, callback)},
+      function (callback) {add(2, callback)},
+      function (callback) {add(3, callback)}
     ], function (error) {
       assert.equal(error, null);
       counter.remove(3, function (error, score) {
