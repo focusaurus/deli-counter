@@ -1,0 +1,36 @@
+{
+  "name": "deli-counter",
+  "version": "0.0.0",
+  "description": "Manage a small set of low integer numbers like at a busy deli counter \"Now Serving\" style",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/focusaurus/deli-counter"
+  },
+  "keywords": [
+    "redis",
+    "count",
+    "track"
+  ],
+  "author": "Peter Lyons <pete@peterlyons.com> (http://peterlyons.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/focusaurus/deli-counter/issues"
+  },
+  "devDependencies": {
+    "mocha": "~1.14.0",
+    "async": "~0.2.9"
+  },
+  "peerDependencies": {
+    "redis": "~0.9"
+  },
+  "dependencies": {
+    "nimble": "0.0.2"
+  }
+}
