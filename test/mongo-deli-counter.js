@@ -63,26 +63,28 @@ describe("MongoDeliCounter", function () {
     nimble.each([1,1,1], checkAdd, done);
   });
 
-  // it("should reclaim a lower score when length is exceeded", function(done) {
-  //   nimble.series([
-  //     function (callback) {add(1, callback)},
-  //     function (callback) {add(2, callback)},
-  //     function (callback) {add(3, callback)},
-  //     function (callback) {
-  //       // redisClient.del(keyPrefix + '1', callback);
-  //     }
-  //   ], function (error) {
-  //     if (error) {
-  //       done(error);
-  //       return;
-  //     }
-  //     counter.add(4, function (error, score) {
-  //       assert.equal(error, null);
-  //       assert.equal(score, 1);
-  //       done();
-  //     });
-  //   });
-  // });
+  it("should reclaim a lower score when length is exceeded", function(done) {
+    var reclaimCounter = new MongoDeliCounter({
+      getActive: function (presentIds, callback) {callback(null, [1, 3]);},
+      length: 3,
+      mongoClient: counter.mongoClient
+    });
+    nimble.series([
+      function (callback) {reclaimCounter.add(1, callback)},
+      function (callback) {reclaimCounter.add(2, callback)},
+      function (callback) {reclaimCounter.add(3, callback)}
+    ], function (error) {
+      if (error) {
+        done(error);
+        return;
+      }
+      reclaimCounter.add(4, function (error, position) {
+        assert.equal(error, null);
+        assert.equal(position, 2);
+        done();
+      });
+    });
+  });
 
   it("should return false when asked to remove a missing item", function (done) {
     counter.remove(1, function (error, removed) {

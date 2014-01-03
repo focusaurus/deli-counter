@@ -13,6 +13,7 @@ var nimble = require('nimble');
 function MongoDeliCounter(options) {
   this.mongoClient = options.mongoClient;
   this.length = options.length || 100;
+  this.getActive = options.getActive;
   this.collectionName = options.collectionName || "delicounter";
   this.collection = this.mongoClient.collection(this.collectionName);
 }
@@ -46,22 +47,35 @@ MongoDeliCounter.prototype.remove = function remove(item, callback) {
   });
 };
 
-// MongoDeliCounter.prototype.reclaim = function (item, callback) {
-//   var self = this;
-//   this.mongoClient.exists(this.propertyName + item, function (error, exists) {
-//     if (error) {
-//       callback(error);
-//       return;
-//     }
-//     if (exists) {
-//       return callback();
-//     }
-//     //OK, time to reclaim
-//     self.mongoClient.zrem(self.collectionName, item, callback);
-//   });
-// };
+MongoDeliCounter.prototype._push = function _push(item, callback) {
+  var self = this;
+  this.collection.find({}, ['position']).toArray(function (error, items) {
+    if (error) {
+      callback(error);
+      return;
+    }
+    var activePositions = items.map(function (item) {
+      return item.position;
+    });
+    var lowestAvailablePosition;
+    for (var i = 1, length = self.length; i <= length; i++) {
+      if (activePositions.indexOf(i) < 0) {
+        //this position is not in active use and thus is available
+        lowestAvailablePosition = i;
+        break;
+      }
+    }
+    //@TODO: handle case where no available positions.
+    //probably emit an error event and just assign positions
+    //greater than length and shrug
+    var doc = {item: item, position: lowestAvailablePosition};
+    self.collection.insert(doc, function (error) {
+      callback(error, doc.position);
+    });
+  });
+};
 
-MongoDeliCounter.prototype.purge = function (callback) {
+MongoDeliCounter.prototype.purge = function _purge(callback) {
   var self = this;
   this.collection.count(function (error, count) {
     if (error) {
@@ -74,38 +88,32 @@ MongoDeliCounter.prototype.purge = function (callback) {
       return;
     }
     //items limit reached. Time to discard stale elements
-    self.collection.find({}, ['item'], function (error, docs) {
+    self.collection.find({}, ['item']).toArray(function (error, docs) {
       if (error) {
         callback(error);
         return;
       }
       var itemIds = docs.map(function (doc) {return doc.item;});
-      getActiveItemIds(itemIds, callback);
+      self.getActive(itemIds, deleteInactive);
     });
-    function getActiveItemIds(allItemIds, cb) {
-
+    function deleteInactive(error, activeItemIds, cb) {
+      if (error) {
+        callback(error);
+        return;
+      }
+      self.collection.remove({item: {$nin: activeItemIds}}, callback);
     }
-
-    function deleteInactive(activeItemIds, cb) {
-
-    }
-    //get set of items paired with a position
-    //get subset of those items that are still active
-    //delete docs not in that set
   });
 };
 
 MongoDeliCounter.prototype._purgePush = function _push(item, callback) {
   var self = this;
-  this.purge(function (error, count) {
+  this.purge(function (error) {
     if (error) {
       callback(error);
       return;
     }
-    var doc = {item: item, position: count + 1};
-    self.collection.insert(doc, function (error) {
-      callback(error, doc.position);
-    });
+    self._push(item, callback);
   });
 };
 
