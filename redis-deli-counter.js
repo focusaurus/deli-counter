@@ -6,7 +6,10 @@ var nimble = require('nimble');
 * small positive integer, so instead of "user with session 18aeouc322348723aud"
 * you can have "user015".
 *
-* @param length (positive integer) rollover the counter when this limit is exceeded
+* @param options.redisClient (object) a connected redis client instance
+* @param options.length (positive integer) rollover the counter when this limit is exceeded
+* @param options.setName (string) name of the redis set to use (default "delicounter")
+* @param options.keyPrefix (string) prefix for records (default "")
 */
 function RedisDeliCounter(options) {
   this.redisClient = options.redisClient

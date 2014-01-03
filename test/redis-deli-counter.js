@@ -93,6 +93,27 @@ describe("RedisDeliCounter", function () {
     });
   });
 
+  it("should reclaim a lower interior score when length is exceeded", function(done) {
+    nimble.series([
+      function (callback) {add(1, callback)},
+      function (callback) {add(2, callback)},
+      function (callback) {add(3, callback)},
+      function (callback) {
+        redisClient.del(keyPrefix + '2', callback);
+      }
+    ], function (error) {
+      if (error) {
+        done(error);
+        return;
+      }
+      counter.add(4, function (error, score) {
+        assert.equal(error, null);
+        assert.equal(score, 2);
+        done();
+      });
+    });
+  });
+
   it("should return false when asked to remove a missing item", function (done) {
     counter.remove(1, function (error, removed) {
       assert.equal(error, null);

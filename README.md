@@ -14,4 +14,8 @@ Stores values in memory. OK for small things.
 
 ## RedisDeliCounter
 
-Stores values in Redis. There will be basically 2 sets of interest. The "big set" which is normally your session store, and the internal delicounter set where we keep the small numbers.
+Stores values in redis. There will be basically 2 sets of interest. The "big set" which is normally your session store, and the internal delicounter set where we keep the small numbers.
+
+## MongoDeliCounter
+
+Stores values in mongodb.
