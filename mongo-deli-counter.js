@@ -1,28 +1,36 @@
-var nimble = require('nimble');
-
 /**
 * Assign easy numeric numbers to a small set of objects with complex unique IDs
 * Main use case is to map a complex and hard-to-recognize session ID to a simple
 * small positive integer, so instead of "user with session 18aeouc322348723aud"
 * you can have "user015".
 *
-* @param options.mongoClient (object) a connected mongo client instance
-* @param options.length (positive integer) rollover the counter when this limit is exceeded
-* @param options.collectionName (string) name of the mongo collection to use (default "delicounter")
+* @param options.mongoClient
+*   a connected mongo client instance. Required.
+*   type: object
+* @param options.getActive
+*   a function called to get the list of item IDs still in active use.
+*   Usage is getActive(callback) and callback takes (error, arrayOfActiveItemIds).
+*   Required.
+*   type: function
+* @param options.length
+*   rollover the counter when this limit is exceeded.
+*   type: positive integer
+*   Optional. Default 100.
+* @param options.collectionName
+*   name of the mongo collection to use.
+*   type: string
+*   Optional. Default "delicounter".
 */
 function MongoDeliCounter(options) {
   this.mongoClient = options.mongoClient;
-  this.length = options.length || 100;
   this.getActive = options.getActive;
-  this.collectionName = options.collectionName || "delicounter";
-  this.collection = this.mongoClient.collection(this.collectionName);
+  this.length = options.length || 100;
+  this.collection = this.mongoClient.collection(
+    options.collectionName || "delicounter");
 }
 
-MongoDeliCounter.prototype.add = function add(item, callback) {
-
-  //check if document already exists
-  //if so, return it's current position
-  //if not, count docs in collection, increment, assign that position to this item
+//@TODO: optimize DB queries to just one findAll
+function add(item, callback) {
   var self = this;
   this.collection.findOne(
       {item: item, position: {$exists: true}},
@@ -37,17 +45,29 @@ MongoDeliCounter.prototype.add = function add(item, callback) {
       return;
     }
     //We need to add the item
-    self._purgePush(item, callback);
+    _purgeThenAdd.call(self, item, callback);
   });
 };
 
-MongoDeliCounter.prototype.remove = function remove(item, callback) {
-  this.collection.remove({item: item}, {multi: false, safe: true}, function (error, count) {
+function remove(item, callback) {
+  this.collection.remove(
+      {item: item}, {multi: false, safe: true}, function (error, count) {
     callback(error, count > 0);
   });
-};
+}
 
-MongoDeliCounter.prototype._push = function _push(item, callback) {
+function reset(callback) {
+  this.collection.remove(function (error) {
+    if (error && error.errmsg === "ns not found") {
+      //collection doesn't exist. No worries.
+      callback();
+      return;
+    }
+    callback(error);
+  });
+}
+
+function _add(item, callback) {
   var self = this;
   this.collection.find({}, ['position']).toArray(function (error, items) {
     if (error) {
@@ -75,7 +95,7 @@ MongoDeliCounter.prototype._push = function _push(item, callback) {
   });
 };
 
-MongoDeliCounter.prototype.purge = function _purge(callback) {
+function _purge(callback) {
   var self = this;
   this.collection.count(function (error, count) {
     if (error) {
@@ -106,36 +126,20 @@ MongoDeliCounter.prototype.purge = function _purge(callback) {
   });
 };
 
-MongoDeliCounter.prototype._purgePush = function _push(item, callback) {
+function _purgeThenAdd(item, callback) {
   var self = this;
-  this.purge(function (error) {
+  _purge.call(this, function (error) {
     if (error) {
       callback(error);
       return;
     }
-    self._push(item, callback);
+    _add.call(self, item, callback)
   });
 };
 
-MongoDeliCounter.prototype.list = function list(callback) {
-  this.mongoClient.zrevrangebyscore(
-    this.collectionName,
-    '+inf', //max index
-     0, //min index
-    'WITHSCORES',
-    callback
-  );
+MongoDeliCounter.prototype = {
+  add:    add,
+  remove: remove,
+  reset:  reset
 };
-
-MongoDeliCounter.prototype.reset = function reset(callback) {
-  this.collection.remove(function (error) {
-    if (error && error.errmsg === "ns not found") {
-      //collection doesn't exist. No worries.
-      callback();
-      return;
-    }
-    callback(error);
-  });
-};
-
 module.exports = MongoDeliCounter;
