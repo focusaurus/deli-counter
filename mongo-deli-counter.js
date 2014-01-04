@@ -32,20 +32,23 @@ function MongoDeliCounter(options) {
 //@TODO: optimize DB queries to just one findAll
 function add(item, callback) {
   var self = this;
-  this.collection.findOne(
-      {item: item, position: {$exists: true}},
-      function (error, itemInDb) {
+  //turns out it's probably more effecient to just load them all,
+  //because otherwise we have to make several queries
+  this.collection.find().toArray(function (error, tickets) {
     if (error) {
       callback(error);
       return;
     }
-    if (itemInDb) {
+    var existingTicket = tickets.filter(function (item) {
+      return item.item == item;
+    }).pop();
+    if (existingTicket) {
       //item is already present. All good.
-      callback(null, itemInDb.position);
+      callback(null, existingTicket.position);
       return;
     }
     //We need to add the item
-    _purgeThenAdd.call(self, item, callback);
+    _purgeThenAdd.call(self, item, tickets, callback);
   });
 };
 
@@ -67,73 +70,66 @@ function reset(callback) {
   });
 }
 
-function _add(item, callback) {
-  var self = this;
-  this.collection.find({}, ['position']).toArray(function (error, items) {
-    if (error) {
-      callback(error);
-      return;
-    }
-    var activePositions = items.map(function (item) {
-      return item.position;
-    });
-    var lowestAvailablePosition;
-    for (var i = 1, length = self.length; i <= length; i++) {
-      if (activePositions.indexOf(i) < 0) {
-        //this position is not in active use and thus is available
-        lowestAvailablePosition = i;
-        break;
-      }
-    }
-    //@TODO: handle case where no available positions.
-    //probably emit an error event and just assign positions
-    //greater than length and shrug
-    var doc = {item: item, position: lowestAvailablePosition};
-    self.collection.insert(doc, function (error) {
-      callback(error, doc.position);
-    });
+function _add(item, activeTickets, callback) {
+  var activePositions = activeTickets.map(function (ticket) {
+    return ticket.position;
   });
-};
+  var lowestAvailablePosition;
+  for (var i = 1, length = this.length; i <= length; i++) {
+    if (activePositions.indexOf(i) < 0) {
+      //this position is not in active use and thus is available
+      lowestAvailablePosition = i;
+      break;
+    }
+  }
+  //@TODO: handle case where no available positions.
+  //probably emit an error event and just assign positions
+  //greater than length and shrug
+  var ticket = {item: item, position: lowestAvailablePosition};
+  this.collection.insert(ticket, function (error) {
+    callback(error, ticket.position);
+  });
+}
 
-function _purge(callback) {
+function _purge(tickets, callback) {
   var self = this;
-  this.collection.count(function (error, count) {
+  if (tickets.length < this.length) {
+    //still OK to grow
+    process.nextTick(function () {
+      callback(null, tickets);
+    });
+    return;
+  }
+  //tickets limit reached. Time to discard stale elements
+  var itemIds = tickets.map(function (doc) {return doc.item;});
+  this.getActive(itemIds, deleteInactive);
+  function deleteInactive(error, activeItemIds, cb) {
     if (error) {
       callback(error);
       return;
     }
-    if (count < self.length) {
-      //still OK to grow
-      callback(null, count);
-      return;
-    }
-    //items limit reached. Time to discard stale elements
-    self.collection.find({}, ['item']).toArray(function (error, docs) {
+    self.collection.remove({item: {$nin: activeItemIds}}, function (error) {
       if (error) {
         callback(error);
         return;
       }
-      var itemIds = docs.map(function (doc) {return doc.item;});
-      self.getActive(itemIds, deleteInactive);
+      //now we need to prune the in-memory list as well to keep in sync
+      var activeTickets = tickets.filter(function (ticket) {
+        return activeItemIds.indexOf(ticket.item) >= 0;
+      });
+      callback(null, activeTickets);
     });
-    function deleteInactive(error, activeItemIds, cb) {
-      if (error) {
-        callback(error);
-        return;
-      }
-      self.collection.remove({item: {$nin: activeItemIds}}, callback);
-    }
-  });
-};
+  }
+}
 
-function _purgeThenAdd(item, callback) {
+function _purgeThenAdd(item, tickets, callback) {
   var self = this;
-  _purge.call(this, function (error) {
+  _purge.call(this, tickets, function (error, activeTickets) {
     if (error) {
       callback(error);
       return;
     }
-    _add.call(self, item, callback)
+    _add.call(self, item, activeTickets, callback)
   });
 };
 
