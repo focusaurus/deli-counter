@@ -1,6 +1,6 @@
 {
   "name": "deli-counter",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Manage a small set of low integer numbers like at a busy deli counter \"Now Serving\" style",
   "main": "index.js",
   "directories": {
@@ -29,6 +29,5 @@
   "peerDependencies": {
     "mongodb": "~1"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }
