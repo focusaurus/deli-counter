@@ -6,12 +6,12 @@
 *
 * @param length (positive integer) rollover the counter when this limit is exceeded
 */
-function DeliCounter(length) {
+function MemoryDeliCounter(length) {
   this.items = [];
   this.length = length;
 }
 
-DeliCounter.prototype.add = function add(item) {
+MemoryDeliCounter.prototype.add = function add(item) {
   var itemIndex = this.items.indexOf(item);
   if (itemIndex >= 0) {
     //item is already present. All good.
@@ -35,7 +35,7 @@ DeliCounter.prototype.add = function add(item) {
   }
 };
 
-DeliCounter.prototype.remove = function remove(item) {
+MemoryDeliCounter.prototype.remove = function remove(item) {
   var index = this.items.indexOf(item);
   if (index < 0) {
     return false;
@@ -44,9 +44,9 @@ DeliCounter.prototype.remove = function remove(item) {
   return index + 1;
 };
 
-DeliCounter.prototype._push = function _push(item) {
+MemoryDeliCounter.prototype._push = function _push(item) {
   this.items.push(item);
   return this.items.length;
 };
 
-module.exports = DeliCounter;
+module.exports = MemoryDeliCounter;

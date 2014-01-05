@@ -1,7 +1,7 @@
 var assert            = require("assert");
 var nimble            = require('nimble');
 var redis             = require("redis");
-var RedisDeliCounter  = require("../redis-deli-counter");
+var RedisDeliCounter  = require("../RedisDeliCounter");
 
 var redisClient = redis.createClient(
   process.env.DC_REDIS_PORT || 6379,

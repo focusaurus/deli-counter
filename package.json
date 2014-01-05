@@ -24,7 +24,8 @@
     "url": "https://github.com/focusaurus/deli-counter/issues"
   },
   "devDependencies": {
-    "mocha": "~1.14.0"
+    "mocha": "~1.14.0",
+    "nimble": "~0.0.2"
   },
   "peerDependencies": {
     "mongodb": "~1"
