@@ -47,6 +47,6 @@ DeliCounter.prototype.remove = function remove(item) {
 DeliCounter.prototype._push = function _push(item) {
   this.items.push(item);
   return this.items.length;
-}
+};
 
 module.exports = DeliCounter;

@@ -1,6 +1,6 @@
 {
   "name": "deli-counter",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Manage a small set of low integer numbers like at a busy deli counter \"Now Serving\" style",
   "main": "index.js",
   "directories": {
@@ -14,7 +14,6 @@
     "url": "https://github.com/focusaurus/deli-counter"
   },
   "keywords": [
-    "redis",
     "mongodb",
     "count",
     "track"
@@ -28,10 +27,8 @@
     "mocha": "~1.14.0"
   },
   "peerDependencies": {
-    "redis": "~0.9",
-    "mongodb": "~1.3"
+    "mongodb": "~1"
   },
   "dependencies": {
-    "nimble": "0.0.2"
   }
 }

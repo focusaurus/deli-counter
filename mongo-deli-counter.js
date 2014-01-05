@@ -29,7 +29,16 @@ function MongoDeliCounter(options) {
     options.collectionName || "delicounter");
 }
 
-//@TODO: optimize DB queries to just one findAll
+/**
+ * Add an item to the deli counter. This is "taking a number".
+ *
+ * @param item unique item to track
+ *  type: string or number
+ *  Required.
+ * @param callback will be invoked with (error, position)
+ *  type: function
+ *  Required.
+ */
 function add(item, callback) {
   var self = this;
   //turns out it's probably more effecient to just load them all,
@@ -39,19 +48,37 @@ function add(item, callback) {
       callback(error);
       return;
     }
-    var existingTicket = tickets.filter(function (item) {
-      return item.item == item;
-    }).pop();
-    if (existingTicket) {
+    var existingTicket = tickets.filter(function (ticket) {
+      return ticket.item == item;
+    });
+    if (existingTicket.length) {
       //item is already present. All good.
-      callback(null, existingTicket.position);
+      callback(null, existingTicket[0].position);
       return;
     }
     //We need to add the item
+    if (tickets.length < self.length) {
+      //still OK to grow. Compute max position.
+      var max = maxPosition(tickets);
+      _add.call(self, item, max + 1, callback);
+      return;
+    }
+    //tickets limit reached. Time to discard stale elements
     _purgeThenAdd.call(self, item, tickets, callback);
   });
-};
+}
 
+/**
+ * Remove an item from the deli counter. Frees up the item's position.
+ *
+ * @param item unique item to track, which has been previously added
+ *  type: string or number
+ *  Required.
+ * @param callback will be invoked with (error, found), where found is a
+ *   boolean indicating whether the item was actually tracked
+ *  type: function
+ *  Required.
+ */
 function remove(item, callback) {
   this.collection.remove(
       {item: item}, {multi: false, safe: true}, function (error, count) {
@@ -59,6 +86,13 @@ function remove(item, callback) {
   });
 }
 
+/**
+ * Remove all state and initialize/clear the counter back to zero.
+ *
+ * @param callback will be invoked with (error)
+ *  type: function
+ *  Required.
+ */
 function reset(callback) {
   this.collection.remove(function (error) {
     if (error && error.errmsg === "ns not found") {
@@ -70,22 +104,12 @@ function reset(callback) {
   });
 }
 
-function _add(item, activeTickets, callback) {
-  var activePositions = activeTickets.map(function (ticket) {
-    return ticket.position;
-  });
-  var lowestAvailablePosition;
-  for (var i = 1, length = this.length; i <= length; i++) {
-    if (activePositions.indexOf(i) < 0) {
-      //this position is not in active use and thus is available
-      lowestAvailablePosition = i;
-      break;
-    }
-  }
+///// internal helper methods /////
+function _add(item, position, callback) {
   //@TODO: handle case where no available positions.
   //probably emit an error event and just assign positions
   //greater than length and shrug
-  var ticket = {item: item, position: lowestAvailablePosition};
+  var ticket = {item: item, position: position};
   this.collection.insert(ticket, function (error) {
     callback(error, ticket.position);
   });
@@ -93,14 +117,6 @@ function _add(item, activeTickets, callback) {
 
 function _purge(tickets, callback) {
   var self = this;
-  if (tickets.length < this.length) {
-    //still OK to grow
-    process.nextTick(function () {
-      callback(null, tickets);
-    });
-    return;
-  }
-  //tickets limit reached. Time to discard stale elements
   var itemIds = tickets.map(function (doc) {return doc.item;});
   this.getActive(itemIds, deleteInactive);
   function deleteInactive(error, activeItemIds, cb) {
@@ -129,9 +145,34 @@ function _purgeThenAdd(item, tickets, callback) {
       callback(error);
       return;
     }
-    _add.call(self, item, activeTickets, callback)
+    var position = minPosition(activeTickets, self.length);
+    _add.call(self, item, position, callback);
   });
-};
+}
+
+///// internal helper functions /////
+function minPosition(activeTickets, length) {
+  var activePositions = activeTickets.map(function (ticket) {
+    return ticket.position;
+  });
+  var min;
+  for (var i = 1; i <= length; i++) {
+    if (activePositions.indexOf(i) < 0) {
+      //this position is not in active use and thus is available
+      min = i;
+      break;
+    }
+  }
+  return min || (length + 1);
+}
+
+function maxPosition(tickets) {
+  if (tickets.length < 1) {
+    return 0;
+  }
+  var positions = tickets.map(function (ticket) { return ticket.position;});
+  return Math.max.apply(null, positions);
+}
 
 MongoDeliCounter.prototype = {
   add:    add,
@@ -139,3 +180,7 @@ MongoDeliCounter.prototype = {
   reset:  reset
 };
 module.exports = MongoDeliCounter;
+module.exports._test = {
+  minPosition: minPosition,
+  maxPosition: maxPosition
+};
