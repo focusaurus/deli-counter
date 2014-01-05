@@ -1,3 +1,6 @@
+//This is a work-in-progress. Doesn't work correctly yet.
+//if development resumes, put nimble and redis in the package.json
+return; ///////////////////!!!!!!!!!!!!!!!!!!!!!!!!!!
 var nimble = require('nimble');
 
 /**
@@ -12,7 +15,7 @@ var nimble = require('nimble');
 * @param options.keyPrefix (string) prefix for records (default "")
 */
 function RedisDeliCounter(options) {
-  this.redisClient = options.redisClient
+  this.redisClient = options.redisClient;
   this.length = options.length || 100;
   this.setName = options.setName || "delicounter";
   this.keyPrefix = options.keyPrefix || "";
@@ -25,7 +28,7 @@ RedisDeliCounter.prototype.add = function add(item, callback) {
       callback(error);
       return;
     }
-    if (score != null) {
+    if (score !== null) {
       //item is already present. All good.
       callback(null, score);
       return;

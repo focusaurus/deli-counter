@@ -16,10 +16,9 @@ Stores values in memory. OK for small in-process things.
 
 Stores values in mongodb. Driving use case was mapping web session IDs to small integers, so a `getActive` function such as
 
-
-    function getActive(sessionIds, callback) {
-      mongoClient.sessions.find(
-          {_id: {$in: sessionIds}}, ["_id"], function (error, sessions) {
+    function getActive(mongoClient, sessionIds, callback) {
+      mongoClient.collection("sessions").find(
+          {_id: {$in: sessionIds}}, ["_id"]).toArray(function (error, sessions) {
         if (error) {
           callback(error);
           return;

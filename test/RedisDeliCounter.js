@@ -1,3 +1,7 @@
+//This is a work-in-progress. Doesn't work correctly yet.
+//if development resumes, put nimble and redis in the package.json
+return; ///////////////////!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 var assert            = require("assert");
 var nimble            = require('nimble');
 var redis             = require("redis");
